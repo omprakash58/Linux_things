@@ -1,0 +1,100 @@
+Arch Linux install::--
+#this file contains the necessary commands required for Arch linux install in an orderly fashion
+If you are a little familiar with Arch install You may not need to read other documentation for commands/process
+
+##Read This For ISO image Download and creating bootable USB drive:-
+--Download the iso from https://www.archlinux.org/download/ #choose mirror near to you
+
+--I prefer to flash usb via EtchDroid on Play Store, [Use etcher or nay other to create a bootable usb drive]
+
+--Go to your Laptops boot menu (For Lenovo Ideapad F2 is boot key) and 1.Set boot option to UEFI/EFI 2.Give Your Bootable USB highest priority & save settings and exit
+
+--Throughout installation YOu'll have to press Enter after Typing your command and confirming Changes you made
+--First Check system for internet connectivity (Considering you are connected to 	
+ 	ethernet)
+	ping google.com				#press ctl+c to stop
+--[* Use rfkill command to know blocked devices (if any) ]
+	rfkill unblock all 			(Unblocks ethernet, wifi, bluetooth ports[if softblocked])
+
+Actual Procedure Starts Here:	
+##	1.Create new partition Table and overwrites existing data	##
+	fdisk -l		/dev/sda	#sda is the disk on which Arch will be installed
+	fdisk /dev/sda
+	g							#GPT partition Table
+	n							#new partition					#EFI
+	+300M or +512M
+	t							#type of FileSystem
+	1
+	n							#EXT4		#Root FS
+	+50G or 60G
+	n							#EXT4		#Home Folder
+	+default_value	
+	p							#print
+	w							#write	(overwrites existing data)
+	
+	
+##	2.Formatting Created Partitions	##
+	mkfs.fat -F32 /dev/sda1		#formatted efi as fat
+	mkfs.ext4 /dev/sda2			#formatted the partition as ext4
+	mkfs.ext4 /dev/sda3
+	
+##	3.mount the root file system and install the actual system	##
+	mount /dev/sda2 /mnt
+	mkdir /mnt/home
+	mount /dev/sda3 /mnt/home	#separate root and home partitions
+	pacstrap -i /mnt base		#installs system by downloading files
+	
+##	4.Generating fstab file (So that Distribution knows which partition it needs to mount at boot time) ##
+	genfstab -U -p /mnt >> /mnt/etc/fstab		#Now Arch Is installed!
+	
+##	5.chroot and installing other packages ##
+	arch-chroot /mnt
+	pacman -S grub efibootmgr dosfstools linux-headers linux-lts mtools 
+	linux-lts-headers nano
+	
+##	6.Generating Locale (Selcting English US)
+	nano /etc/locale.gen 		#uncomment en_US.UTF-8 UTF-8
+	locale-gen
+	
+##	7.Setting a root passwd
+	passwd						#Type your Password
+	
+##	8.Make directory for EFi and install grub and set grub locale
+	mkdir /boot/EFI
+	mount /dev/sda1 /boot/EFI
+	grub-install --target=x86_64-efi --bootloader-id=grub_uefi --recheck 
+	cp /usr/share/locale/en\@quot/LC_MESSAGES/grub.mo /boot/grub/locale/en.mo
+	grub-mkconfig -o /boot/grub/grub.cfg
+	
+##  9.Creating a swap file (optional)
+	fallocate -l 2G /swapfile	#creating 2G file
+	chmod 600 /swapfile			#permissions
+	mkswap /swapfile			#convert it to true swaofile
+	echo '/swapfile none swap sw 0 0' | tee -a /etc/fstab
+	cat /etc/fstab				#shows what fstab looks like
+	
+##	10.Install Desktop Environment (Gnome why? Because it's the best)
+	pacman -S xorg
+	pacman -S gnome
+	systemctl start gdm.service
+	systemctl enable gdm.service
+	systemctl enable networkmanager.service
+	
+	
+##	11.Exit and reboot
+	exit	#to exit out of chroot environment
+	umount -a 	#unmounts disks
+	reboot
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+		
+	
